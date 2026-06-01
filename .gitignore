@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Uploaded files
+backend/uploads/
+backend/droplink.db
+
+# Node
+frontend/node_modules/
+
+# React build (we commit the build so Railway can serve it)
+# frontend/build/
+
+# OS
+.DS_Store
+Thumbs.db
