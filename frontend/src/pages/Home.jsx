@@ -344,27 +344,27 @@ export default function Home() {
       {/* Cloud Safety Section */}
       <div className="safety-section">
         <h2>Your files are protected</h2>
-        <p className="safety-sub">DropLink is built with privacy and security at its core — not as an afterthought.</p>
+        <p className="safety-sub">Every claim below is backed by real code — not marketing.</p>
         <div className="safety-grid">
           <div className="safety-card">
             <div className="safety-icon">🔐</div>
-            <h3>Encrypted at rest</h3>
-            <p>All files are stored with AES-256 encryption on Supabase cloud infrastructure. No one can read your file without your unique link.</p>
+            <h3>AES-256 encrypted storage</h3>
+            <p>Files are stored on Supabase cloud infrastructure, which applies AES-256 encryption at rest on every object. DropLink never stores files on an unencrypted disk.</p>
           </div>
           <div className="safety-card">
             <div className="safety-icon">🔗</div>
-            <h3>Private link only</h3>
-            <p>Your file is never indexed or searchable. Access requires the exact unique token in the link — mathematically unguessable.</p>
+            <h3>Private link — never indexed</h3>
+            <p>Access requires your exact 10-character random hex token. There is no search, no directory, and no API to list files. Brute-forcing the token space (16¹⁰ combinations) is computationally infeasible.</p>
           </div>
           <div className="safety-card">
             <div className="safety-icon">🗑️</div>
-            <h3>Permanent deletion</h3>
-            <p>When a link expires, the file is permanently and irreversibly deleted from storage. No backups, no recovery — clean slate.</p>
+            <h3>Proactive permanent deletion</h3>
+            <p>Expired files are deleted from cloud storage on every upload cycle — not lazily. Once gone, there is no backup or recovery path. The <code>/api/cleanup</code> endpoint can also be called on a schedule.</p>
           </div>
           <div className="safety-card">
             <div className="safety-icon">🚫</div>
-            <h3>Zero tracking</h3>
-            <p>No cookies, no accounts, no analytics on your files. We don't know who you are and we don't want to — by design.</p>
+            <h3>Rate-limit data auto-purged daily</h3>
+            <p>The only data stored is a daily upload token count per browser (not linked to any identity). It is automatically deleted at the end of each UTC day — no data persists beyond 24 hours.</p>
           </div>
         </div>
       </div>

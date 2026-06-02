@@ -51,6 +51,44 @@ def _tokens_used_today(device_id):
     db.close()
     return row['tokens_used'] if row else 0
 
+def _cleanup_expired():
+    """
+    Proactively delete every expired file from storage and the database,
+    then purge daily_usage rows older than today so no stale data lingers.
+    Returns the number of files deleted.
+    """
+    now_str = _now().isoformat()
+    today   = _now().strftime('%Y-%m-%d')
+    db      = get_db()
+
+    expired = db.execute(
+        "SELECT stored_name FROM files WHERE expires_at < ?", [now_str]
+    ).fetchall()
+
+    deleted = 0
+    for row in expired:
+        try:
+            if USE_SUPABASE:
+                sb_delete(row['stored_name'])
+            else:
+                path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
+                if os.path.exists(path):
+                    os.remove(path)
+            deleted += 1
+        except Exception:
+            pass
+
+    if expired:
+        db.execute("DELETE FROM files WHERE expires_at < ?", [now_str])
+
+    # Purge rate-limit records older than today — no need to keep yesterday's data
+    db.execute("DELETE FROM daily_usage WHERE date < ?", [today])
+
+    db.commit()
+    db.close()
+    return deleted
+
+
 def _deduct_tokens(device_id, cost):
     today = _now().strftime('%Y-%m-%d')
     db = get_db()
@@ -65,6 +103,12 @@ def _deduct_tokens(device_id, cost):
 
 @files_bp.route('/upload', methods=['POST'])
 def upload():
+    # Piggyback cleanup on every upload — ensures expired files are never left in storage
+    try:
+        _cleanup_expired()
+    except Exception:
+        pass
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
 
@@ -300,6 +344,23 @@ def delete_my_file(owner_token, token):
     db.commit()
     db.close()
     return jsonify({'message': 'Deleted'})
+
+
+@files_bp.route('/cleanup', methods=['GET', 'POST'])
+def cleanup():
+    secret = os.getenv('CLEANUP_SECRET', '')
+    if secret:
+        provided = (request.headers.get('X-Cleanup-Secret') or
+                    request.args.get('secret') or '')
+        if provided != secret:
+            return jsonify({'error': 'Unauthorized'}), 401
+    deleted = _cleanup_expired()
+    return jsonify({
+        'ok':      True,
+        'deleted': deleted,
+        'message': f'Purged {deleted} expired file(s) from storage and cleared stale rate-limit records.',
+        'ran_at':  _now().isoformat(),
+    })
 
 
 @files_bp.route('/tokens', methods=['GET'])

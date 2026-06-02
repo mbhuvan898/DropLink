@@ -30,6 +30,7 @@ def init_db():
             tokens_used INTEGER DEFAULT 0,
             UNIQUE(device_id, date)
         );
+        CREATE INDEX IF NOT EXISTS idx_files_expires_at ON files(expires_at);
     ''')
 
     # Migrate old daily_usage (ip column) to new schema (device_id column)
