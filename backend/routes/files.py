@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file, current_app, redirect
+from flask import Blueprint, request, jsonify, send_file, current_app
 from database import get_db
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
@@ -17,7 +17,7 @@ USE_SUPABASE = (
 )
 
 if USE_SUPABASE:
-    from supabase_client import upload_file as sb_upload, get_public_url as sb_url, delete_file as sb_delete
+    from supabase_client import upload_file as sb_upload, stream_file as sb_stream, delete_file as sb_delete
 
 
 def _now():
@@ -183,7 +183,13 @@ def download(token):
     db.close()
 
     if USE_SUPABASE:
-        return redirect(sb_url(row['stored_name']))
+        stream, ct = sb_stream(row['stored_name'])
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=row['original_name'],
+            mimetype=row['mimetype'] or ct,
+        )
 
     path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
     if not os.path.exists(path):

@@ -30,6 +30,10 @@ def get_public_url(stored_name):
         f'/storage/v1/object/public/{BUCKET}/{stored_name}'
     )
 
+def stream_file(stored_name):
+    resp = get_s3().get_object(Bucket=BUCKET, Key=stored_name)
+    return resp['Body'], resp.get('ContentType', 'application/octet-stream')
+
 def delete_file(stored_name):
     try:
         get_s3().delete_object(Bucket=BUCKET, Key=stored_name)
