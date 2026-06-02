@@ -190,7 +190,9 @@ def preview(token):
 
     if USE_SUPABASE:
         stream, _ = sb_stream(row['stored_name'])
-        return send_file(stream, mimetype=mimetype)
+        resp = send_file(stream, mimetype=mimetype)
+        resp.headers['Content-Length'] = row['size']
+        return resp
 
     path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
     if not os.path.exists(path):
@@ -223,12 +225,14 @@ def download(token):
 
     if USE_SUPABASE:
         stream, ct = sb_stream(row['stored_name'])
-        return send_file(
+        resp = send_file(
             stream,
             as_attachment=True,
             download_name=row['original_name'],
             mimetype=row['mimetype'] or ct,
         )
+        resp.headers['Content-Length'] = row['size']
+        return resp
 
     path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
     if not os.path.exists(path):

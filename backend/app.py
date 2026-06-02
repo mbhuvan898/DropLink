@@ -11,9 +11,12 @@ BUILD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'front
 def create_app():
     app = Flask(__name__, static_folder=None)
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 * 1024
+    app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 * 1024
 
-    CORS(app)
+    CORS(app, resources={r'/api/*': {
+        'origins': '*',
+        'allow_headers': ['Content-Type', 'X-Device-Token'],
+    }})
     init_db()
 
     from routes.files import files_bp

@@ -146,7 +146,7 @@ export default function Home() {
         <>
           <div className="hero">
             <h1>Share files <em>instantly</em><br />with anyone</h1>
-            <p>Upload any file up to 5 GB. Get a shareable link. Done. No sign-up required.</p>
+            <p>Upload any file up to 1 GB. Get a shareable link. Done. No sign-up required.</p>
           </div>
 
           <div className="upload-zone">
@@ -159,7 +159,7 @@ export default function Home() {
             >
               <span className="drop-icon">☁️</span>
               <div className="drop-title">Drop your file here</div>
-              <div className="drop-sub">or click to browse — any file type, up to 5 GB</div>
+              <div className="drop-sub">or click to browse — any file type, up to 1 GB</div>
               <button className="btn-browse" onClick={e => { e.stopPropagation(); fileRef.current.click() }}>
                 Choose File
               </button>
@@ -340,6 +340,103 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Cloud Safety Section */}
+      <div className="safety-section">
+        <h2>Your files are protected</h2>
+        <p className="safety-sub">DropLink is built with privacy and security at its core — not as an afterthought.</p>
+        <div className="safety-grid">
+          <div className="safety-card">
+            <div className="safety-icon">🔐</div>
+            <h3>Encrypted at rest</h3>
+            <p>All files are stored with AES-256 encryption on Supabase cloud infrastructure. No one can read your file without your unique link.</p>
+          </div>
+          <div className="safety-card">
+            <div className="safety-icon">🔗</div>
+            <h3>Private link only</h3>
+            <p>Your file is never indexed or searchable. Access requires the exact unique token in the link — mathematically unguessable.</p>
+          </div>
+          <div className="safety-card">
+            <div className="safety-icon">🗑️</div>
+            <h3>Permanent deletion</h3>
+            <p>When a link expires, the file is permanently and irreversibly deleted from storage. No backups, no recovery — clean slate.</p>
+          </div>
+          <div className="safety-card">
+            <div className="safety-icon">🚫</div>
+            <h3>Zero tracking</h3>
+            <p>No cookies, no accounts, no analytics on your files. We don't know who you are and we don't want to — by design.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Enterprise API — Upcoming Feature */}
+      <div className="enterprise-section">
+        <div className="enterprise-inner">
+          <div className="enterprise-badge">Coming Soon</div>
+          <h2>DropLink Enterprise API</h2>
+          <p className="enterprise-sub">
+            Programmatic file transfers for teams, apps, and workflows — no UI required.
+          </p>
+
+          <div className="enterprise-cols">
+            <div className="enterprise-features">
+              <div className="ent-feature">
+                <span className="ent-icon">🔑</span>
+                <div>
+                  <strong>API key authentication</strong>
+                  <p>Secure your integration with per-app API keys. Rotate or revoke at any time.</p>
+                </div>
+              </div>
+              <div className="ent-feature">
+                <span className="ent-icon">📤</span>
+                <div>
+                  <strong>Bulk file transfers</strong>
+                  <p>Upload and manage hundreds of files in one API call. Built for automation.</p>
+                </div>
+              </div>
+              <div className="ent-feature">
+                <span className="ent-icon">🪝</span>
+                <div>
+                  <strong>Webhook notifications</strong>
+                  <p>Get notified instantly when a file is downloaded or a link expires.</p>
+                </div>
+              </div>
+              <div className="ent-feature">
+                <span className="ent-icon">📈</span>
+                <div>
+                  <strong>Higher limits &amp; priority CDN</strong>
+                  <p>Larger files, more daily tokens, and faster delivery through global edge nodes.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="enterprise-code">
+              <div className="code-label">Example · Upload via API</div>
+              <pre className="code-block">{`POST /api/enterprise/upload
+Authorization: Bearer dk_live_••••••••••
+
+{
+  "expires_in": "7d",
+  "webhook_url": "https://yourapp.com/hook"
+}
+
+→ 201 Created
+{
+  "token": "a3f9c12e01",
+  "share_url": "https://droplink.app/d/a3f9c12e01",
+  "expires_at": "2026-06-09T10:00:00Z"
+}`}</pre>
+            </div>
+          </div>
+
+          <div className="enterprise-cta">
+            <button className="btn-waitlist" onClick={() => alert('Thanks! We will reach out when the API launches.')}>
+              Join the Waitlist →
+            </button>
+            <span className="waitlist-note">Be the first to get access. No spam, ever.</span>
+          </div>
+        </div>
+      </div>
 
       <footer className="footer">
         DropLink · Files deleted after expiry · No account required
