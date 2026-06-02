@@ -22,17 +22,21 @@ function fileEmoji(name = '') {
 function timeLeft(expiresAt) {
   const diff = new Date(expiresAt) - new Date()
   if (diff <= 0) return 'Expired'
-  const h = Math.floor(diff / 3600000)
+  const d = Math.floor(diff / 86400000)
+  const h = Math.floor((diff % 86400000) / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
+  if (d > 0) return `${d}d ${h}h left`
+  if (h > 0) return `${h}h ${m}m left`
+  return `${m}m left`
 }
 
 export default function Download() {
   const { token } = useParams()
-  const [file, setFile]         = useState(null)
-  const [error, setError]       = useState(null)
-  const [loading, setLoading]   = useState(true)
+  const [file, setFile]               = useState(null)
+  const [error, setError]             = useState(null)
+  const [loading, setLoading]         = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [previewErr, setPreviewErr]   = useState(false)
 
   useEffect(() => {
     fetch(`${API}/api/file/${token}`)
@@ -56,7 +60,8 @@ export default function Download() {
     setTimeout(() => setDownloading(false), 2000)
   }
 
-  const ownerToken = getOwnerToken()
+  const ownerToken   = getOwnerToken()
+  const isImage      = file && file.mimetype && file.mimetype.startsWith('image/')
 
   return (
     <div className="download-page">
@@ -66,7 +71,7 @@ export default function Download() {
         </Link>
         {ownerToken
           ? <a href={`/my/${ownerToken}`} className="nav-my-files">My Files</a>
-          : <div className="nav-tagline">Share files instantly</div>
+          : <Link to="/" className="nav-my-files">Upload a file</Link>
         }
       </nav>
 
@@ -81,21 +86,34 @@ export default function Download() {
         {error && (
           <div className="download-card">
             <span className="expired-icon">🔗</span>
-            <div className="expired-title">{error === 'This link has expired' || error === 'Link expired' ? 'Link Expired' : 'File Not Found'}</div>
+            <div className="expired-title">
+              {error === 'This link has expired' || error === 'Link expired' ? 'Link Expired' : 'File Not Found'}
+            </div>
             <div className="expired-sub" style={{ marginBottom: 28 }}>
               {error === 'This link has expired' || error === 'Link expired'
-                ? 'This download link has expired. DropLink files are available for 24 hours only.'
+                ? 'This download link has expired. Files are automatically deleted after their set duration.'
                 : 'This file could not be found. It may have been deleted or the link is incorrect.'}
             </div>
-            <Link to="/">
-              <button className="btn-download">Upload a new file</button>
-            </Link>
+            <Link to="/"><button className="btn-download">Upload your own file</button></Link>
           </div>
         )}
 
         {file && (
           <div className="download-card">
-            <span className="dl-file-icon">{fileEmoji(file.name)}</span>
+            {isImage && !previewErr && (
+              <div className="dl-preview">
+                <img
+                  src={`${API}/api/preview/${token}`}
+                  alt={file.name}
+                  onError={() => setPreviewErr(true)}
+                />
+              </div>
+            )}
+
+            {!isImage && (
+              <span className="dl-file-icon">{fileEmoji(file.name)}</span>
+            )}
+
             <div className="dl-filename">{file.name}</div>
 
             <div className="dl-meta" style={{ marginBottom: 28 }}>
@@ -104,12 +122,10 @@ export default function Download() {
                 <div className="dl-meta-value">{file.size}</div>
               </div>
               <div className="dl-meta-item">
-                <div className="dl-meta-label">Downloads</div>
-                <div className="dl-meta-value">{file.downloads}</div>
-              </div>
-              <div className="dl-meta-item">
                 <div className="dl-meta-label">Expires in</div>
-                <div className="dl-meta-value" style={{ color: 'var(--primary)' }}>{timeLeft(file.expires_at)}</div>
+                <div className="dl-meta-value" style={{ color: 'var(--primary)' }}>
+                  {timeLeft(file.expires_at)}
+                </div>
               </div>
             </div>
 
@@ -117,15 +133,17 @@ export default function Download() {
               {downloading ? '⟳ Starting download…' : '⬇ Download File'}
             </button>
             <div className="dl-note">File auto-deleted after expiry · No account needed</div>
-            <Link to="/" className="btn-manage-link" style={{ marginTop: 16 }}>
-              ☁️ Share your own file
+
+            <div className="dl-divider" />
+            <Link to="/" className="btn-upload-own">
+              ☁️ Share your own file on DropLink
             </Link>
           </div>
         )}
       </div>
 
       <footer className="footer">
-        DropLink · Files are deleted after 24 hours · No account required
+        DropLink · Files deleted after expiry · No account required
       </footer>
     </div>
   )

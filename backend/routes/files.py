@@ -35,23 +35,29 @@ def _token_cost(size_bytes):
     if mb < 500: return 2
     return 3
 
-def _get_ip():
-    return request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+def _get_device_id():
+    # Prefer browser device token (localStorage-based, per-browser not per-IP)
+    device = request.headers.get('X-Device-Token', '').strip()
+    if device:
+        return f'd:{device[:64]}'
+    # Fallback to IP
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    return f'ip:{ip}'
 
-def _tokens_used_today(ip):
+def _tokens_used_today(device_id):
     today = _now().strftime('%Y-%m-%d')
     db  = get_db()
-    row = db.execute('SELECT tokens_used FROM daily_usage WHERE ip=? AND date=?', [ip, today]).fetchone()
+    row = db.execute('SELECT tokens_used FROM daily_usage WHERE device_id=? AND date=?', [device_id, today]).fetchone()
     db.close()
     return row['tokens_used'] if row else 0
 
-def _deduct_tokens(ip, cost):
+def _deduct_tokens(device_id, cost):
     today = _now().strftime('%Y-%m-%d')
     db = get_db()
     db.execute(
-        'INSERT INTO daily_usage (ip, date, tokens_used) VALUES (?,?,?) '
-        'ON CONFLICT(ip,date) DO UPDATE SET tokens_used=tokens_used+?',
-        [ip, today, cost, cost]
+        'INSERT INTO daily_usage (device_id, date, tokens_used) VALUES (?,?,?) '
+        'ON CONFLICT(device_id,date) DO UPDATE SET tokens_used=tokens_used+?',
+        [device_id, today, cost, cost]
     )
     db.commit()
     db.close()
@@ -71,13 +77,14 @@ def upload():
     if expires_in not in EXPIRY_HOURS:
         expires_in = '24h'
 
-    ip = _get_ip()
+    device_id  = _get_device_id()
     rough_cost = _token_cost(request.content_length or 0)
-    used = _tokens_used_today(ip)
+    used       = _tokens_used_today(device_id)
     if used + rough_cost > DAILY_TOKEN_LIMIT:
         return jsonify({
             'error': f'Daily limit reached. {DAILY_TOKEN_LIMIT - used} token(s) left.',
-            'tokens_left': DAILY_TOKEN_LIMIT - used
+            'tokens_left': DAILY_TOKEN_LIMIT - used,
+            'tokens_limit': DAILY_TOKEN_LIMIT,
         }), 429
 
     token    = uuid.uuid4().hex[:10]
@@ -95,7 +102,7 @@ def upload():
         size = os.path.getsize(save_path)
 
     cost = _token_cost(size)
-    used = _tokens_used_today(ip)
+    used = _tokens_used_today(device_id)
     if used + cost > DAILY_TOKEN_LIMIT:
         if USE_SUPABASE:
             sb_delete(stored)
@@ -103,7 +110,8 @@ def upload():
             os.remove(save_path)
         return jsonify({
             'error': f'Daily limit reached. {DAILY_TOKEN_LIMIT - used} token(s) left.',
-            'tokens_left': DAILY_TOKEN_LIMIT - used
+            'tokens_left': DAILY_TOKEN_LIMIT - used,
+            'tokens_limit': DAILY_TOKEN_LIMIT,
         }), 429
 
     expires_at = (_now() + timedelta(hours=EXPIRY_HOURS[expires_in])).isoformat()
@@ -117,8 +125,8 @@ def upload():
     db.commit()
     db.close()
 
-    _deduct_tokens(ip, cost)
-    tokens_left = DAILY_TOKEN_LIMIT - _tokens_used_today(ip)
+    _deduct_tokens(device_id, cost)
+    tokens_left = DAILY_TOKEN_LIMIT - _tokens_used_today(device_id)
 
     return jsonify({
         'token':        token,
@@ -145,8 +153,9 @@ def file_info(token):
     if expires.tzinfo is None:
         expires = expires.replace(tzinfo=timezone.utc)
     if _now() > expires:
-        path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
-        if os.path.exists(path): os.remove(path)
+        if not USE_SUPABASE:
+            path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
+            if os.path.exists(path): os.remove(path)
         db2 = get_db(); db2.execute('DELETE FROM files WHERE token=?', [token]); db2.commit(); db2.close()
         return jsonify({'error': 'This link has expired'}), 410
 
@@ -156,10 +165,37 @@ def file_info(token):
         'size':       _fmt_size(row['size']),
         'size_bytes': row['size'],
         'mimetype':   row['mimetype'],
-        'downloads':  row['downloads'],
         'expires_at': row['expires_at'],
         'created_at': row['created_at'],
     })
+
+
+@files_bp.route('/preview/<token>', methods=['GET'])
+def preview(token):
+    db  = get_db()
+    row = db.execute('SELECT * FROM files WHERE token=?', [token]).fetchone()
+    db.close()
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+
+    mimetype = row['mimetype'] or ''
+    if not mimetype.startswith('image/'):
+        return jsonify({'error': 'Not previewable'}), 400
+
+    expires = datetime.fromisoformat(row['expires_at'])
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if _now() > expires:
+        return jsonify({'error': 'Expired'}), 410
+
+    if USE_SUPABASE:
+        stream, _ = sb_stream(row['stored_name'])
+        return send_file(stream, mimetype=mimetype)
+
+    path = os.path.join(current_app.config['UPLOAD_FOLDER'], row['stored_name'])
+    if not os.path.exists(path):
+        return jsonify({'error': 'File missing'}), 404
+    return send_file(path, mimetype=mimetype)
 
 
 @files_bp.route('/download/<token>', methods=['GET'])
@@ -175,8 +211,9 @@ def download(token):
         expires = expires.replace(tzinfo=timezone.utc)
     if _now() > expires:
         stored = row['stored_name']; db.close()
-        path = os.path.join(current_app.config['UPLOAD_FOLDER'], stored)
-        if os.path.exists(path): os.remove(path)
+        if not USE_SUPABASE:
+            path = os.path.join(current_app.config['UPLOAD_FOLDER'], stored)
+            if os.path.exists(path): os.remove(path)
         db2 = get_db(); db2.execute('DELETE FROM files WHERE token=?', [token]); db2.commit(); db2.close()
         return jsonify({'error': 'Link expired'}), 410
 
@@ -233,6 +270,7 @@ def my_files(owner_token):
             'token':      row['token'],
             'name':       row['original_name'],
             'size':       _fmt_size(row['size']),
+            'mimetype':   row['mimetype'],
             'downloads':  row['downloads'],
             'expires_in': row['expires_in'],
             'expires_at': row['expires_at'],
@@ -262,6 +300,6 @@ def delete_my_file(owner_token, token):
 
 @files_bp.route('/tokens', methods=['GET'])
 def token_balance():
-    ip   = _get_ip()
-    used = _tokens_used_today(ip)
+    device_id = _get_device_id()
+    used      = _tokens_used_today(device_id)
     return jsonify({'limit': DAILY_TOKEN_LIMIT, 'used': used, 'left': DAILY_TOKEN_LIMIT - used})
