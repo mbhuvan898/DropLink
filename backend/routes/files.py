@@ -86,8 +86,9 @@ def upload():
     mimetype = mimetypes.guess_type(f.filename)[0] or 'application/octet-stream'
 
     if USE_SUPABASE:
+        f.stream.seek(0, 2)
+        size = f.stream.tell()
         sb_upload(stored, f.stream, mimetype)
-        size = request.content_length or 0
     else:
         save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], stored)
         f.save(save_path)
@@ -120,14 +121,15 @@ def upload():
     tokens_left = DAILY_TOKEN_LIMIT - _tokens_used_today(ip)
 
     return jsonify({
-        'token':       token,
-        'owner_token': owner_token,
-        'name':        f.filename,
-        'size':        _fmt_size(size),
-        'expires_in':  expires_in,
-        'expires_at':  expires_at,
-        'tokens_used': cost,
-        'tokens_left': tokens_left,
+        'token':        token,
+        'owner_token':  owner_token,
+        'name':         f.filename,
+        'size':         _fmt_size(size),
+        'expires_in':   expires_in,
+        'expires_at':   expires_at,
+        'tokens_used':  cost,
+        'tokens_left':  tokens_left,
+        'tokens_limit': DAILY_TOKEN_LIMIT,
     }), 201
 
 

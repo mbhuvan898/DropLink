@@ -52,6 +52,7 @@ export default function Home() {
   const [copied, setCopied]         = useState(false)
   const [expiry, setExpiry]         = useState('24h')
   const [tokens, setTokens]         = useState(null)
+  const [error, setError]           = useState(null)
   const ownerToken = getOrCreateOwnerToken()
   const fileRef = useRef()
 
@@ -67,6 +68,7 @@ export default function Home() {
     setSelected(file)
     setUploading(true)
     setProgress(0)
+    setError(null)
 
     const xhr  = new XMLHttpRequest()
     const form = new FormData()
@@ -81,13 +83,13 @@ export default function Home() {
       const data = JSON.parse(xhr.responseText)
       if (xhr.status === 201) {
         setResult(data)
-        setTokens(t => t ? { ...t, left: data.tokens_left, used: t.limit - data.tokens_left } : null)
+        setTokens({ limit: data.tokens_limit, left: data.tokens_left, used: data.tokens_limit - data.tokens_left })
       } else {
-        alert(data.error || 'Upload failed')
+        setError(data.error || 'Upload failed')
       }
       setUploading(false)
     }
-    xhr.onerror = () => { alert('Upload failed'); setUploading(false) }
+    xhr.onerror = () => { setError('Upload failed'); setUploading(false) }
     xhr.open('POST', `${API}/api/upload`)
     xhr.send(form)
   }, [expiry])
@@ -110,7 +112,7 @@ export default function Home() {
   }
 
   const reset = () => {
-    setResult(null); setSelected(null); setProgress(0); setUploading(false)
+    setResult(null); setSelected(null); setProgress(0); setUploading(false); setError(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -240,6 +242,15 @@ export default function Home() {
             </div>
           </div>
         </>
+      )}
+
+      {error && !uploading && !result && (
+        <div style={{ padding: '40px 20px', maxWidth: 580, margin: '0 auto' }}>
+          <div className="upload-error">
+            <span>⚠ {error}</span>
+            <button className="btn-new" onClick={reset} style={{ marginTop: 14 }}>Try again</button>
+          </div>
+        </div>
       )}
 
       {uploading && selectedFile && (

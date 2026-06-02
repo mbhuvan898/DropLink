@@ -116,7 +116,10 @@ export default function Download() {
             <button className="btn-download" onClick={download} disabled={downloading}>
               {downloading ? '⟳ Starting download…' : '⬇ Download File'}
             </button>
-            <div className="dl-note">This file will be automatically deleted after 24 hours</div>
+            <div className="dl-note">File auto-deleted after expiry · No account needed</div>
+            <Link to="/" className="btn-manage-link" style={{ marginTop: 16 }}>
+              ☁️ Share your own file
+            </Link>
           </div>
         )}
       </div>
