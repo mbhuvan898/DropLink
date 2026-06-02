@@ -9,7 +9,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 BUILD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build'))
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=None)
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 * 1024
 
