@@ -12,8 +12,8 @@ DAILY_TOKEN_LIMIT = 10
 EXPIRY_HOURS = {'24h': 24, '2d': 48, '7d': 168}
 
 USE_SUPABASE = (
-    bool(os.getenv('SUPABASE_URL')) and
-    os.getenv('SUPABASE_URL') != 'paste_your_project_url_here'
+    bool(os.getenv('SUPABASE_ACCESS_KEY')) and
+    os.getenv('SUPABASE_ACCESS_KEY') != 'paste_your_project_url_here'
 )
 
 if USE_SUPABASE:
