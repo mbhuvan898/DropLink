@@ -666,6 +666,6 @@ MIT License — free to use, modify, and distribute.
 
 <div align="center">
 
-Built with ♥ by **Nishmitha Pawan** · Deployed on [Railway](https://railway.app) · Storage by [Supabase](https://supabase.com)
+Built with ♥ by **Bhuvan** · Deployed on [Railway](https://railway.app) · Storage by [Supabase](https://supabase.com)
 
 </div>
