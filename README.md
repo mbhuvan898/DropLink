@@ -73,34 +73,34 @@ DropLink is a **no-signup, ephemeral file sharing platform**. Upload any file up
 
 ```mermaid
 graph TB
-    subgraph Client ["🌐 Client (Browser)"]
-        React["⚛️ React 18\nSPA — 3 pages"]
-        LS["📦 localStorage\nowner_token · device_token"]
+    subgraph Client ["Client — Browser"]
+        React["React 18 SPA — 3 pages"]
+        LS["localStorage: owner_token · device_token"]
     end
 
-    subgraph Server ["🐍 Flask Backend (Railway)"]
-        API["REST API\n/api/*"]
-        Cleanup["🗑️ _cleanup_expired()\nRuns on every upload"]
-        RateLimit["🔢 Token Rate Limiter\nPer browser · 10/day"]
+    subgraph Server ["Flask Backend — Railway"]
+        API["REST API  /api/*"]
+        Cleanup["_cleanup_expired() — runs on every upload"]
+        RateLimit["Token Rate Limiter — 10 per browser per day"]
     end
 
-    subgraph Storage ["☁️ Cloud Storage"]
-        Supabase["Supabase S3\nAES-256 encrypted\nFiles stored by random token"]
-        SQLite["🗄️ SQLite\nFile metadata\nToken usage"]
+    subgraph Storage ["Cloud Storage"]
+        Supabase["Supabase S3 — AES-256 encrypted"]
+        SQLite["SQLite — file metadata · token usage"]
     end
 
-    React -->|"POST /api/upload\nX-Device-Token header"| API
-    React -->|"GET /api/file/:token"| API
-    React -->|"GET /api/download/:token"| API
-    React -->|"GET /api/preview/:token"| API
-    React -->|"GET /api/my/:ownerToken"| API
+    React -->|POST /api/upload + X-Device-Token| API
+    React -->|GET /api/file/:token| API
+    React -->|GET /api/download/:token| API
+    React -->|GET /api/preview/:token| API
+    React -->|GET /api/my/:ownerToken| API
 
     API --> RateLimit
     API --> Cleanup
-    API -->|"upload_file / stream_file / delete_file"| Supabase
-    API -->|"INSERT · SELECT · DELETE"| SQLite
+    API -->|upload / stream / delete| Supabase
+    API -->|INSERT · SELECT · DELETE| SQLite
 
-    LS -.->|"owner_token sent as X-Device-Token"| React
+    LS -.->|device_token attached to requests| React
 ```
 
 ---
@@ -127,7 +127,7 @@ sequenceDiagram
     BE-->>FE: { token, share_url, tokens_left }
     FE-->>U: Show share link + WhatsApp / Telegram buttons
 
-    U->>R: Sends link  →  droplink.app/d/a3f9c12e01
+    U->>R: Sends link — droplink.app/d/a3f9c12e01
 
     R->>FE: Opens /d/a3f9c12e01
     FE->>BE: GET /api/file/a3f9c12e01
@@ -153,15 +153,15 @@ stateDiagram-v2
 
     [*] --> Uploading : User selects file
 
-    Uploading --> Active : Stored in Supabase\nMetadata saved in DB
+    Uploading --> Active : Stored in Supabase · Metadata saved in DB
 
-    Active --> Active : Downloads tracked\nLink shareable
+    Active --> Active : Downloads tracked · Link shareable
 
-    Active --> Expired : expires_at timestamp\npasses UTC midnight
+    Active --> Expired : expires_at timestamp passes UTC midnight
 
-    Expired --> Deleted : _cleanup_expired()\nruns on next upload\nor /api/cleanup call
+    Expired --> Deleted : _cleanup_expired runs on next upload or /api/cleanup
 
-    Deleted --> [*] : Removed from Supabase\nRemoved from DB\nLink returns 410 Gone
+    Deleted --> [*] : Removed from Supabase and DB · Link returns 410 Gone
 ```
 
 ---
